@@ -7,6 +7,7 @@ require (
 	github.com/joho/godotenv v1.5.1
 	github.com/sirupsen/logrus v1.9.3
 	github.com/xssnick/tonutils-go v1.9.8
+	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7
 )
 
 require (

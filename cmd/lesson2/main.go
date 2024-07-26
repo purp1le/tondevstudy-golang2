@@ -135,9 +135,26 @@ func run() error {
 				continue
 			}
 
-			_, err = bodySlice.LoadMaybeRef()
+			fwdPayload, err := bodySlice.LoadMaybeRef()
 			if err != nil {
 				logrus.Error("fwd payload err: ", err)
+				continue
+			}
+
+			fwdOp, err := fwdPayload.LoadUInt(32)
+			if err != nil {
+				logrus.Error("fwd op err: ", err)
+				continue
+			}
+
+			if fwdOp != 0 {
+				logrus.Error("not text comment")
+				continue
+			}
+
+			textComment, err := fwdPayload.LoadStringSnake()
+			if err != nil {
+				logrus.Error("text comment err: ", err)
 				continue
 			}
 
@@ -145,6 +162,7 @@ func run() error {
 			logrus.Info("[JTN] sender: ", sender)
 			logrus.Info("[JTN] amount: ", amount)
 			logrus.Info("[JTN] query id: ", queryId)
+			logrus.Info("[JTN] comment: ", textComment)
 
 			// if opcode != 0 {
 			// 	logrus.Warn("not text comment, skip")
