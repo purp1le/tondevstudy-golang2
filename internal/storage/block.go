@@ -8,3 +8,4 @@ type Block struct {
 	Shard       int64
 	ProcessedAt time.Time
 }
+

@@ -2,6 +2,7 @@ package main
 
 import (
 	"ton-lessons2/internal/app"
+	"ton-lessons2/internal/scanner"
 )
 
 func main() {
@@ -15,13 +16,12 @@ func run() error {
 		return err
 	}
 
+	scanner, err := scanner.NewScanner()
+	if err != nil {
+		return err
+	}
 
-	// scanner, err := scanner.NewScanner()
-	// if err != nil {
-	// 	return err
-	// }
-
-	// scanner.Listen()
+	scanner.Listen()
 
 	return nil
 }

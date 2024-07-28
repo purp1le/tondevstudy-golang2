@@ -3,8 +3,11 @@ package scanner
 import (
 	"context"
 	"fmt"
+	"time"
+	"ton-lessons2/internal/storage"
 
 	"github.com/xssnick/tonutils-go/ton"
+	"gorm.io/gorm"
 )
 
 func (s *scanner) getShardID(shard *ton.BlockIDExt) string {
@@ -42,7 +45,22 @@ func (s *scanner) getNonSeenShards(
 	return ret, nil
 }
 
-func (s *scanner) addBlock(master ton.BlockIDExt) error {
+func (s *scanner) addBlock(
+	master ton.BlockIDExt,
+	dbtx *gorm.DB,
+) error {
+	newBlock := storage.Block{
+		SeqNo:       master.SeqNo,
+		WorkChain:   master.Workchain,
+		Shard:       master.Shard,
+		ProcessedAt: time.Now(),
+	}
+
+	if err := dbtx.Create(&newBlock).Error; err != nil {
+		return err
+	}
+
+	s.lastBlock = newBlock
 	s.lastBlock.SeqNo += 1
 	return nil
 }
