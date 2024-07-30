@@ -6,6 +6,7 @@ import (
 	"time"
 	"ton-lessons2/internal/storage"
 
+	"github.com/xssnick/tonutils-go/tlb"
 	"github.com/xssnick/tonutils-go/ton"
 	"gorm.io/gorm"
 )
@@ -72,4 +73,22 @@ func (s *scanner) getLastBlockSeqno() (uint32, error) {
 	}
 
 	return lastMaster.SeqNo, nil
+}
+
+
+// key -> value
+// key -> value
+
+func (s *scanner) getUniqueShards(shards []*ton.BlockIDExt) (uniqueShards []*ton.BlockIDExt) {
+	var shardMap map[string]*ton.BlockIDExt = make(map[string]*tlb.BlockInfo)
+
+	for _, shard := range shards {
+		shardMap[s.getShardID(shard)] = shard
+	}
+
+	for _, uniqShard := range shardMap {
+		uniqueShards = append(uniqueShards, uniqShard)
+	}
+
+	return uniqueShards
 }

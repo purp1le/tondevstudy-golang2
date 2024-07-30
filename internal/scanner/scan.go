@@ -50,7 +50,7 @@ func (s *scanner) Listen() {
 	if err := app.DB.Last(&s.lastBlock).Error; err != nil {
 		s.lastBlock.SeqNo = 0
 	} else {
-		s.lastBlock.SeqNo += 1
+		s.lastBlock.SeqNo = 0
 	}
 
 	if s.lastBlock.SeqNo == 0 {
@@ -156,6 +156,9 @@ func (s *scanner) processBlocks() {
 
 // input message 1
 // output messages 2
+
+
+
 func (s *scanner) processMcBlock(master *ton.BlockIDExt) error {
 	timeStart := time.Now()
 
@@ -186,15 +189,22 @@ func (s *scanner) processMcBlock(master *ton.BlockIDExt) error {
 
 	if len(newShards) == 0 {
 		newShards = currentShards
+	} else {
+		newShards = append(newShards, currentShards...)
 	}
-	newShards = append(newShards, currentShards...)
+
+	if len(newShards) == 0 {
+		return nil
+	}
 
 	var txList []*tlb.Transaction
 
+
+	uniqueShards := s.getUniqueShards(newShards)
 	var wg sync.WaitGroup
 	var tombGetTransactions tomb.Tomb
 	allDone := make(chan struct{})
-	for _, shard := range newShards {
+	for _, shard := range uniqueShards {
 		var (
 			fetchedIDs []ton.TransactionShortInfo
 			after      *ton.TransactionID3
@@ -277,6 +287,7 @@ func (s *scanner) processMcBlock(master *ton.BlockIDExt) error {
 			}
 		}(dbtx, transaction)
 	}
+	
 
 	go func() {
 		wgTrans.Wait()
@@ -285,7 +296,7 @@ func (s *scanner) processMcBlock(master *ton.BlockIDExt) error {
 
 	select {
 	case <-allDoneTrans:
-	case <- tombTrans.Dying():
+	case <-tombTrans.Dying():
 		logrus.Error("[SCN] err when process transactions: ", err)
 		dbtx.Rollback()
 		return tombTrans.Err()

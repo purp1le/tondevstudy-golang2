@@ -13,7 +13,3 @@ type TransferNotification struct {
 	Sender     *address.Address `tlb:"addr"`
 	FwdPayload *cell.Cell       `tlb:"either . ^"`
 }
-
-type Comment struct {
-	
-}

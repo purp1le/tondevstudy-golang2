@@ -20,6 +20,7 @@ func run() error {
 
 	if err := dbtx.AutoMigrate(
 		&storage.Block{},
+		&storage.DedustSwap{},
 	); err != nil {
 		dbtx.Rollback()
 		return err
