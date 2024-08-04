@@ -19,3 +19,4 @@ type DedustSwap struct {
 	CreatedAt     time.Time
 	ProcessedAt   time.Time
 }
+

@@ -282,12 +282,11 @@ func (s *scanner) processMcBlock(master *ton.BlockIDExt) error {
 
 		go func(dbtx *gorm.DB, transaction *tlb.Transaction) {
 			defer wg.Done()
-			if err := s.processTransaction(transaction, dbtx); err != nil {
+			if err := s.processTransaction(transaction, dbtx, master); err != nil {
 				tombTrans.Kill(err)
 			}
 		}(dbtx, transaction)
 	}
-	
 
 	go func() {
 		wgTrans.Wait()

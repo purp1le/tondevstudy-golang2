@@ -1,6 +1,8 @@
 package scanner
 
 import (
+	"context"
+	"encoding/hex"
 	"fmt"
 	"time"
 	"ton-lessons2/internal/storage"
@@ -13,7 +15,7 @@ import (
 	"gorm.io/gorm"
 )
 
-func (s *scanner) processTransaction(
+func (s *scanner) processTransactionDedust(
 	trans *tlb.Transaction,
 	dbtx *gorm.DB,
 ) error {
@@ -92,6 +94,122 @@ func (s *scanner) processTransaction(
 			return err
 		}
 	}
+
+	return nil
+}
+
+func (s *scanner) processTransaction(
+	trans *tlb.Transaction,
+	dbtx *gorm.DB,
+	master *tlb.BlockInfo,
+) error {
+	var (
+		stonfiPart1 structures.StonfiSwapPart1
+		stonfiPart2 structures.StonfiSwapPart2
+		part2Found  = false
+	)
+
+	if trans.IO.In.MsgType != tlb.MsgTypeInternal {
+		return nil
+	}
+
+	inMessage := trans.IO.In.AsInternal()
+	if inMessage.Body == nil {
+		return nil
+	}
+
+	if inMessage.SrcAddr.String() !=
+		address.MustParseAddr("EQB3ncyBUTjZUA5EnFKR5_EnOMI9V1tTEAAPaiU71gc4TiUt").String() {
+		return nil
+	}
+
+	// hex hash - 82566ad72b6568fe7276437d3b0c911aab65ed701c13601941b2917305e81c11
+	accountInfo, err := s.api.GetAccount(
+		context.Background(),
+		master,
+		address.NewAddress(0, 0, trans.AccountAddr),
+	)
+	if err != nil {
+		return err
+	}
+
+	if hex.EncodeToString(accountInfo.Code.Hash()) != "82566ad72b6568fe7276437d3b0c911aab65ed701c13601941b2917305e81c11" {
+		logrus.Warn("[SCN] hex hash dont equals: ", address.NewAddress(0, 0, trans.AccountAddr))
+		return nil
+	} 
+
+	if err := tlb.LoadFromCell(&stonfiPart1, inMessage.Body.BeginParse()); err != nil {
+		return nil
+	}
+
+	if trans.IO.Out == nil {
+		return nil
+	}
+
+	outMessages, err := trans.IO.Out.ToSlice()
+	if err != nil {
+		return nil
+	}
+
+	for _, outMessage := range outMessages {
+		if part2Found {
+			continue
+		}
+
+		if outMessage.MsgType != tlb.MsgTypeInternal {
+			continue
+		}
+
+		outInternalMessage := outMessage.AsInternal()
+
+		if outInternalMessage.Body == nil {
+			continue
+		}
+
+		if err := tlb.LoadFromCell(&stonfiPart2, outInternalMessage.Body.BeginParse()); err != nil {
+			continue
+		}
+
+		if stonfiPart2.OwnerAddr.String() == stonfiPart1.ToAddress.String() {
+			part2Found = true
+		}
+	}
+
+	if !part2Found {
+		return nil
+	}
+
+	var (
+		amountIn  string
+		amountOut string
+	)
+
+	if stonfiPart2.RefData.Amount0Out.String() == "0" {
+		amountIn = fmt.Sprintf("%s %s",
+			stonfiPart1.JettonAmount.String(),
+			stonfiPart2.RefData.Token0,
+		)
+
+		amountOut = fmt.Sprintf("%s %s",
+			stonfiPart2.RefData.Amount1Out.String(),
+			stonfiPart2.RefData.Token1,
+		)
+	} else {
+		amountIn = fmt.Sprintf("%s %s",
+			stonfiPart1.JettonAmount.String(),
+			stonfiPart2.RefData.Token1,
+		)
+
+		amountOut = fmt.Sprintf("%s %s",
+			stonfiPart2.RefData.Amount0Out.String(),
+			stonfiPart2.RefData.Token0,
+		)
+	}
+
+	logrus.Info("[STON.FI] new swap found!")
+	logrus.Info("[STON.FI] swaper: ", stonfiPart1.ToAddress)
+	logrus.Info("[STON.FI] amount input: ", amountIn)
+	logrus.Info("[STON.FI] amount out: ", amountOut)
 
 	return nil
 }
