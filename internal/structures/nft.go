@@ -2,6 +2,7 @@ package structures
 
 import (
 	"github.com/xssnick/tonutils-go/address"
+	"github.com/xssnick/tonutils-go/tlb"
 	"github.com/xssnick/tonutils-go/tvm/cell"
 )
 
@@ -26,7 +27,31 @@ type NftCollectionData struct {
 	RoyaltyParams RoyaltyParams    `tlb:"^"`
 }
 
-
+type SaleFees struct {
+	MarketplaceFeeAddress *address.Address `tlb:"addr"`
+	MarketplaceFee        tlb.Coins        `tlb:"."`
+	RoyaltyAddress        *address.Address `tlb:"addr"`
+	Royalty               tlb.Coins        `tlb:"."`
+}
 type NftSaleData struct {
-	
+	IsComplete         bool             `tlb:"bool"`
+	CreatedAt          uint32           `tlb:"## 32"`
+	MarketplaceAddress *address.Address `tlb:"addr"`
+	NftAddress         *address.Address `tlb:"addr"`
+	NftOwnerAddress    *address.Address `tlb:"addr"`
+	FullPrice          tlb.Coins        `tlb:"."`
+	Fees               SaleFees         `tlb:"^"`
+	SoldAt             uint32           `tlb:"## 32"`
+	QueryId            uint64           `tlb:"## 64"`
+}
+
+// transfer#5fcc3d14 query_id:uint64 new_owner:MsgAddress response_destination:MsgAddress custom_payload:(Maybe ^Cell) forward_amount:(VarUInteger 16) forward_payload:(Either Cell ^Cell) = InternalMsgBody;
+type NftTransferRequest struct {
+	_                   tlb.Magic        `tlb:"#5fcc3d14"`
+	QueryId             uint64           `tlb:"## 64"`
+	NewOwner            *address.Address `tlb:"addr"`
+	ResponseDestination *address.Address `tlb:"addr"`
+	CustomPayload       *cell.Cell       `tlb:"maybe ^"`
+	FwdAmount           tlb.Coins        `tlb:"."`
+	FwdPayload          *cell.Cell       `tlb:"either . ^"`
 }
